@@ -70,19 +70,24 @@ impl Game {
         Ok(())
     }
 
-    fn put_marble(
+    pub fn put_marble(
         &mut self,
         put_coord: Coordinate,
         remove_coord: Coordinate,
         marble: Marble,
     ) -> error::Result<()> {
-        self.board[put_coord] = Ring::Occupied(marble);
+        if let Ring::Vacant = self.board[put_coord] {
+            self.board[put_coord] = Ring::Occupied(marble);
+        } else {
+            return Err(ZertzError::InvalidPuttingMarble);
+        }
+
         self.remove_ring(remove_coord)?;
 
         Ok(())
     }
 
-    pub fn remove_ring(&mut self, coord: Coordinate) -> error::Result<()> {
+    fn remove_ring(&mut self, coord: Coordinate) -> error::Result<()> {
         if !self.valid_to_remove(coord) {
             return Err(ZertzError::InvalidRingToRemove);
         }

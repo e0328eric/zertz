@@ -50,7 +50,7 @@ impl ZertzRenderer for RaylibRenderer<'_> {
                         self.draw_circle_v(coord_to_vec2(x, y), 20., Color::BLACK);
                         self.draw_circle_v(coord_to_vec2(x, y), 10., Color::WHITE);
                     }
-                    Ring::Occupied(Marble::Grey) => {
+                    Ring::Occupied(Marble::Gray) => {
                         self.draw_circle_v(coord_to_vec2(x, y), 30., Color::WHITE);
                         self.draw_circle_v(coord_to_vec2(x, y), 20., Color::BLACK);
                         self.draw_circle_v(coord_to_vec2(x, y), 10., Color::GRAY);

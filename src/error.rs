@@ -4,8 +4,8 @@ use thiserror::Error;
 pub enum ZertzError {
     #[error("That ring which you selected cannot be removed")]
     InvalidRingToRemove,
-    #[error("Failed to calculating components")]
-    FailedToCalculateComponents,
+    #[error("That ring which you selected cannot take some new marble")]
+    InvalidPuttingMarble,
 }
 
 pub type Result<T> = std::result::Result<T, ZertzError>;

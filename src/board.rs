@@ -27,9 +27,9 @@ impl Debug for Ring {
         match self {
             Self::None => write!(f, "."),
             Self::Vacant => write!(f, "O"),
-            Self::Occupied(Marble::White) => write!(f, "\x1b[107mO\x1b[0m"),
-            Self::Occupied(Marble::Grey) => write!(f, "\x1b[100mO\x1b[0m"),
-            Self::Occupied(Marble::Black) => write!(f, "\x1b[97;40mO\x1b[0m"),
+            Self::Occupied(Marble::White) => write!(f, "\x1b[107;30m@\x1b[0m"),
+            Self::Occupied(Marble::Gray) => write!(f, "\x1b[100;30m@\x1b[0m"),
+            Self::Occupied(Marble::Black) => write!(f, "\x1b[97;40m@\x1b[0m"),
         }
     }
 }
@@ -38,7 +38,7 @@ impl Debug for Ring {
 #[derive(Debug, Clone, Copy)]
 pub enum Marble {
     White,
-    Grey,
+    Gray,
     Black,
 }
 
@@ -93,9 +93,13 @@ impl IndexMut<Coordinate> for Board {
 impl Debug for Board {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "")?;
-        for y in (0..7).rev() {
-            writeln!(f, "{:?}", &self.data[7 * y..7 * y + 7])?;
-        }
+        writeln!(f, "{:?}", &self.data[7 * 6..7 * 6 + 7])?;
+        writeln!(f, "  {:?}", &self.data[7 * 5..7 * 5 + 7])?;
+        writeln!(f, "    {:?}", &self.data[7 * 4..7 * 4 + 7])?;
+        writeln!(f, "      {:?}", &self.data[7 * 3..7 * 3 + 7])?;
+        writeln!(f, "        {:?}", &self.data[7 * 2..7 * 2 + 7])?;
+        writeln!(f, "          {:?}", &self.data[7 * 1..7 * 1 + 7])?;
+        writeln!(f, "            {:?}", &self.data[7 * 0..7 * 0 + 7])?;
 
         Ok(())
     }
