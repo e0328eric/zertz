@@ -1,7 +1,0 @@
-[package]
-name = "zertz"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-raylib = { git = "https://github.com/deltaphc/raylib-rs.git", branch = "4.2.0" }
