@@ -1,13 +1,37 @@
+use std::fmt::{self, Debug};
 use std::ops::{Index, IndexMut};
 
+use crate::coordinate::{Coordinate, CoordinateIter};
 use crate::union_find::UnionFind;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Clone, Copy, Default)]
 pub enum Ring {
     None,
     #[default]
     Vacant,
     Occupied(Marble),
+}
+
+impl PartialEq for Ring {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::None, Self::None) => true,
+            (Self::None, _) | (_, Self::None) => false,
+            _ => true,
+        }
+    }
+}
+
+impl Debug for Ring {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::None => write!(f, "."),
+            Self::Vacant => write!(f, "O"),
+            Self::Occupied(Marble::White) => write!(f, "\x1b[107mO\x1b[0m"),
+            Self::Occupied(Marble::Grey) => write!(f, "\x1b[100mO\x1b[0m"),
+            Self::Occupied(Marble::Black) => write!(f, "\x1b[97;40mO\x1b[0m"),
+        }
+    }
 }
 
 #[repr(u8)]
@@ -18,39 +42,61 @@ pub enum Marble {
     Black,
 }
 
-#[derive(Debug)]
 pub struct Board {
-    data: Vec<Ring>,
-    // components: UnionFind<Coordinate>,
+    pub(crate) data: Vec<Ring>,
 }
 
 impl Board {
     pub fn new() -> Self {
-        let data = vec![Ring::default(); 64];
+        let data = vec![Ring::default(); 49];
         let mut output = Self { data };
 
-        for x in 0..7 {
-            for y in 0..7 {
-                if x > y + 3 || y > x + 3 {
-                    output[(x, y)] = Ring::None;
-                }
+        for coord in CoordinateIter::new(Coordinate::new(0, 0), Coordinate::new(6, 6), 6) {
+            if coord.x > coord.y + 3 || coord.y > coord.x + 3 {
+                output[coord] = Ring::None;
             }
         }
 
         output
     }
-}
 
-impl Index<(usize, usize)> for Board {
-    type Output = Ring;
+    pub fn get(&self, coord: Coordinate) -> Option<&Ring> {
+        if coord.x >= 7 || coord.y >= 7 {
+            return None;
+        }
+        self.data.get(coord.x + 7 * coord.y)
+    }
 
-    fn index(&self, idx: (usize, usize)) -> &Self::Output {
-        &self.data[idx.0 + 9 * idx.1]
+    pub fn get_option(&self, coord: Option<Coordinate>) -> Option<&Ring> {
+        if let Some(coord) = coord {
+            self.get(coord)
+        } else {
+            None
+        }
     }
 }
 
-impl IndexMut<(usize, usize)> for Board {
-    fn index_mut(&mut self, idx: (usize, usize)) -> &mut Self::Output {
-        &mut self.data[idx.0 + 9 * idx.1]
+impl Index<Coordinate> for Board {
+    type Output = Ring;
+
+    fn index(&self, coord: Coordinate) -> &Self::Output {
+        &self.data[coord.x + 7 * coord.y]
+    }
+}
+
+impl IndexMut<Coordinate> for Board {
+    fn index_mut(&mut self, coord: Coordinate) -> &mut Self::Output {
+        &mut self.data[coord.x + 7 * coord.y]
+    }
+}
+
+impl Debug for Board {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "")?;
+        for y in (0..7).rev() {
+            writeln!(f, "{:?}", &self.data[7 * y..7 * y + 7])?;
+        }
+
+        Ok(())
     }
 }

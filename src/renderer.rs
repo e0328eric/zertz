@@ -1,6 +1,7 @@
 use raylib::prelude::*;
 
 use crate::board::*;
+use crate::coordinate::Coordinate;
 use crate::{WINDOW_HEIGHT, WINDOW_WIDTH};
 
 pub trait ZertzRenderer {
@@ -36,7 +37,7 @@ impl ZertzRenderer for RaylibRenderer<'_> {
     fn render_board(&mut self, board: &Board) {
         for x in 0..7 {
             for y in 0..7 {
-                let ring = board[(x, y)];
+                let ring = board[Coordinate::new(x, y)];
 
                 match ring {
                     Ring::None => {}
