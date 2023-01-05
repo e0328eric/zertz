@@ -2,11 +2,10 @@ use std::fmt::{self, Debug};
 use std::ops::{Index, IndexMut};
 
 use crate::coordinate::{Coordinate, CoordinateIter};
-use crate::union_find::UnionFind;
 
 #[derive(Clone, Copy, Default)]
 pub enum Ring {
-    None,
+    Empty,
     #[default]
     Vacant,
     Occupied(Marble),
@@ -15,8 +14,8 @@ pub enum Ring {
 impl PartialEq for Ring {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::None, Self::None) => true,
-            (Self::None, _) | (_, Self::None) => false,
+            (Self::Empty, Self::Empty) => true,
+            (Self::Empty, _) | (_, Self::Empty) => false,
             _ => true,
         }
     }
@@ -25,7 +24,7 @@ impl PartialEq for Ring {
 impl Debug for Ring {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::None => write!(f, "."),
+            Self::Empty => write!(f, "."),
             Self::Vacant => write!(f, "O"),
             Self::Occupied(Marble::White) => write!(f, "\x1b[107;30m@\x1b[0m"),
             Self::Occupied(Marble::Gray) => write!(f, "\x1b[100;30m@\x1b[0m"),
@@ -53,7 +52,7 @@ impl Board {
 
         for coord in CoordinateIter::new(Coordinate::new(0, 0), Coordinate::new(6, 6), 6) {
             if coord.x > coord.y + 3 || coord.y > coord.x + 3 {
-                output[coord] = Ring::None;
+                output[coord] = Ring::Empty;
             }
         }
 

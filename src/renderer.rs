@@ -40,7 +40,7 @@ impl ZertzRenderer for RaylibRenderer<'_> {
                 let ring = board[Coordinate::new(x, y)];
 
                 match ring {
-                    Ring::None => {}
+                    Ring::Empty => {}
                     Ring::Vacant => {
                         self.draw_circle_v(coord_to_vec2(x, y), 30., Color::WHITE);
                         self.draw_circle_v(coord_to_vec2(x, y), 20., Color::BLACK);

@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use crate::board;
-
 #[derive(Debug, Clone)]
 pub struct UnionFind<T> {
     inner: HashMap<T, usize>,
@@ -92,7 +90,7 @@ where
         let mut inner = HashMap::with_capacity(elems.len());
         let mut reverse = HashMap::with_capacity(elems.len());
         let mut parent_data = Vec::with_capacity(elems.len());
-        let mut rank_data = vec![0; elems.len()];
+        let rank_data = vec![0; elems.len()];
 
         for (idx, elem) in elems.into_iter().enumerate() {
             inner.insert(elem.clone(), idx);
