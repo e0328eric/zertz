@@ -4,7 +4,6 @@ mod error;
 mod game;
 mod macros;
 mod union_find;
-mod utility;
 
 use board::Marble;
 use coordinate::Coordinate;
