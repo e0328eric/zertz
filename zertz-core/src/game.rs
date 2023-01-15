@@ -1,17 +1,13 @@
-#![allow(unused)]
-
-use std::fmt::{self, Debug};
+use std::fmt::{self, Debug, Display};
 
 // macro include
 use crate::append_occupied_coordinate;
 
 use crate::board::*;
 use crate::coordinate::{Coordinate, CoordinateIter, Direction};
-use crate::error::{self, ZertzError};
+use crate::error::{self, ZertzCoreError};
 use crate::union_find::UnionFind;
 
-const FIRST_PLAYER: usize = 0;
-const SECOND_PLAYER: usize = 1;
 const MAIN_EMPTY_COORD: Coordinate = Coordinate::new(6, 0);
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -21,31 +17,60 @@ struct Score {
     black_count: usize,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-struct Player {
-    score: Score,
-}
-
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
-enum GameAction {
+enum Player {
+    Alice,
+    Bob,
+}
+
+impl Player {
+    fn change_player(&mut self) {
+        match self {
+            Self::Alice => *self = Self::Bob,
+            Self::Bob => *self = Self::Alice,
+        }
+    }
+}
+
+impl From<Player> for usize {
+    fn from(player: Player) -> usize {
+        match player {
+            Player::Alice => 0,
+            Player::Bob => 1,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum GameAction {
     PutMarble,
-    CatchMarble,
+    CatchMarble(Vec<CatchableMove>),
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct CatchableMove {
+    start_coord: Coordinate,
     catched_coord: Coordinate,
     marble_land_coord: Coordinate,
+}
+
+impl Display for CatchableMove {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{{{} -> {}}}", self.start_coord, self.marble_land_coord)
+    }
 }
 
 pub struct Game {
     board: Board,
     components: UnionFind<Coordinate>,
-    players: [Player; 2],
-    current_player: usize,
-    action: GameAction,
+    players_score: [Score; 2],
+    current_player: Player,
 }
+
+// ╭──────────────────────────────────────────────────────────╮
+// │                      Basic Game Api                      │
+// ╰──────────────────────────────────────────────────────────╯
 
 impl Game {
     pub fn new() -> Self {
@@ -55,24 +80,80 @@ impl Game {
                 CoordinateIter::new(Coordinate::new(0, 0), Coordinate::new(6, 6), 6)
                     .collect::<Vec<_>>(),
             ),
-            players: [Player::default(); 2],
-            current_player: FIRST_PLAYER,
-            action: GameAction::PutMarble,
+            players_score: [Score::default(); 2],
+            current_player: Player::Alice,
         };
         output.calculate_components();
 
         output
     }
 
+    pub fn give_main_state(&self) -> GameAction {
+        let list_all_catchable = self.list_all_catchable();
+
+        if list_all_catchable.is_empty() {
+            GameAction::PutMarble
+        } else {
+            GameAction::CatchMarble(list_all_catchable)
+        }
+    }
+}
+
+// ╭──────────────────────────────────────────────────────────╮
+// │                   Catching Marble Api                    │
+// ╰──────────────────────────────────────────────────────────╯
+
+impl Game {
     pub fn catch_marble(
         &mut self,
-        catcher_cood: Coordinate,
-        to_move: Coordinate,
-    ) -> error::Result<()> {
-        todo!()
+        catch_data: CatchableMove,
+    ) -> error::Result<Option<Vec<CatchableMove>>> {
+        let CatchableMove {
+            start_coord,
+            catched_coord,
+            marble_land_coord,
+        } = catch_data;
+
+        match self.board[catched_coord] {
+            Ring::Occupied(Marble::White) => {
+                self.players_score[usize::from(self.current_player)].white_count += 1
+            }
+            Ring::Occupied(Marble::Gray) => {
+                self.players_score[usize::from(self.current_player)].gray_count += 1
+            }
+            Ring::Occupied(Marble::Black) => {
+                self.players_score[usize::from(self.current_player)].black_count += 1
+            }
+            _ => return Err(ZertzCoreError::FailedToCatchMarble),
+        }
+
+        self.board[marble_land_coord] = self.board[start_coord];
+        self.board[start_coord] = Ring::Vacant;
+        self.board[catched_coord] = Ring::Vacant;
+
+        let list_catchable = self.list_catchable_once(marble_land_coord);
+
+        Ok(if list_catchable.is_empty() {
+            self.current_player.change_player();
+            None
+        } else {
+            Some(list_catchable)
+        })
     }
 
-    pub fn list_catchable(&self, coord: Coordinate) -> Vec<CatchableMove> {
+    fn list_all_catchable(&self) -> Vec<CatchableMove> {
+        let mut output = Vec::with_capacity(49);
+
+        for coord in CoordinateIter::new(Coordinate::new(0, 0), Coordinate::new(6, 6), 6) {
+            if let Ring::Occupied(_) = self.board[coord] {
+                output.push(self.list_catchable_once(coord));
+            }
+        }
+
+        output.into_iter().flatten().collect()
+    }
+
+    pub fn list_catchable_once(&self, coord: Coordinate) -> Vec<CatchableMove> {
         let mut output = Vec::with_capacity(6);
 
         append_occupied_coordinate!(self: output, coord, Direction::UP | Direction::RIGHT);
@@ -84,7 +165,13 @@ impl Game {
 
         output
     }
+}
 
+// ╭──────────────────────────────────────────────────────────╮
+// │                    Putting Marble Api                    │
+// ╰──────────────────────────────────────────────────────────╯
+
+impl Game {
     pub fn put_marble(
         &mut self,
         put_coord: Coordinate,
@@ -94,24 +181,25 @@ impl Game {
         if let Ring::Vacant = self.board[put_coord] {
             self.board[put_coord] = Ring::Occupied(marble);
         } else {
-            return Err(ZertzError::InvalidPuttingMarble);
+            return Err(ZertzCoreError::InvalidPuttingMarble);
         }
 
         self.remove_ring(remove_coord)?;
         self.remove_isolated_island();
+        self.current_player.change_player();
 
         Ok(())
     }
 
     fn remove_ring(&mut self, coord: Coordinate) -> error::Result<()> {
         if !self.valid_to_remove_ring(coord) {
-            return Err(ZertzError::InvalidRingToRemove);
+            return Err(ZertzCoreError::InvalidRingToRemove);
         }
 
         let ring = &mut self.board[coord];
         match ring {
             Ring::Vacant => *ring = Ring::Empty,
-            _ => return Err(ZertzError::InvalidRingToRemove),
+            _ => return Err(ZertzCoreError::InvalidRingToRemove),
         }
 
         self.calculate_components();
@@ -208,13 +296,13 @@ impl Game {
             for coord in component_members {
                 match self.board[coord] {
                     Ring::Occupied(Marble::White) => {
-                        self.players[self.current_player].score.white_count += 1
+                        self.players_score[usize::from(self.current_player)].white_count += 1
                     }
                     Ring::Occupied(Marble::Gray) => {
-                        self.players[self.current_player].score.gray_count += 1
+                        self.players_score[usize::from(self.current_player)].gray_count += 1
                     }
                     Ring::Occupied(Marble::Black) => {
-                        self.players[self.current_player].score.black_count += 1
+                        self.players_score[usize::from(self.current_player)].black_count += 1
                     }
                     _ => unreachable!(),
                 }
@@ -235,7 +323,7 @@ impl Debug for Game {
             "\n{:-^63}\n",
             "\x1b[1m\x1b[97m <Player Informations> \x1b[0m"
         )?;
-        writeln!(f, "{:#?}", self.players)?;
+        writeln!(f, "{:#?}", self.players_score)?;
 
         Ok(())
     }

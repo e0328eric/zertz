@@ -4,7 +4,7 @@ use std::ops::{Index, IndexMut};
 use crate::coordinate::{Coordinate, CoordinateIter};
 
 #[derive(Clone, Copy, Default)]
-pub enum Ring {
+pub(crate) enum Ring {
     Empty,
     #[default]
     Vacant,
@@ -41,12 +41,12 @@ pub enum Marble {
     Black,
 }
 
-pub struct Board {
-    pub(crate) data: Vec<Ring>,
+pub(crate) struct Board {
+    pub data: Vec<Ring>,
 }
 
 impl Board {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let data = vec![Ring::default(); 49];
         let mut output = Self { data };
 
@@ -59,14 +59,14 @@ impl Board {
         output
     }
 
-    pub fn get(&self, coord: Coordinate) -> Option<&Ring> {
+    pub(crate) fn get(&self, coord: Coordinate) -> Option<&Ring> {
         if coord.x >= 7 || coord.y >= 7 {
             return None;
         }
         self.data.get(coord.x + 7 * coord.y)
     }
 
-    pub fn get_option(&self, coord: Option<Coordinate>) -> Option<&Ring> {
+    pub(crate) fn get_option(&self, coord: Option<Coordinate>) -> Option<&Ring> {
         if let Some(coord) = coord {
             self.get(coord)
         } else {
