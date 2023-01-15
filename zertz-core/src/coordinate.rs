@@ -92,11 +92,11 @@ pub struct CoordinateIter {
 }
 
 impl CoordinateIter {
-    pub fn new(start: Coordinate, end: Coordinate, row_limit: usize) -> Self {
+    pub fn new() -> Self {
         Self {
-            current: start,
-            end,
-            row_limit,
+            current: Coordinate::new(0, 0),
+            end: Coordinate::new(8, 8),
+            row_limit: 8,
         }
     }
 }
