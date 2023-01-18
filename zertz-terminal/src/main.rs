@@ -6,13 +6,18 @@ mod terminal;
 use std::thread;
 use std::time;
 
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::{
+    event::{Event, KeyCode, KeyEvent, KeyModifiers},
+    style::Stylize,
+};
 
 use zertz_core::board::BoardKind;
 use zertz_core::server::Server;
 
 use renderer::Renderer;
 use terminal::Terminal;
+
+use crate::renderer::rect::Rect;
 
 fn main() -> error::Result<()> {
     let terminal = Terminal::new()?;
@@ -36,6 +41,11 @@ fn main() -> error::Result<()> {
                         (KeyCode::Char('q'), KeyModifiers::NONE) => jmp!("break"),
                         _ => {},
                     }
+                    Event::Mouse(mouse_event) => {
+                        unwrap!(renderer.draw(Rect::new(80, 3).bold(), 0, 0));
+                        unwrap!(renderer.draw("< Mouse Debug >".bold(), 31, 0));
+                        unwrap!(renderer.draw(format!("{:?}", mouse_event).reset(), 2, 1));
+                    },
                     _ => {},
                 }
                 Err(_) => jmp!("break"),
@@ -44,9 +54,7 @@ fn main() -> error::Result<()> {
 
 
         unwrap!(renderer.clear())
-
         unwrap!(renderer.draw_board(&zertz))
-
         unwrap!(renderer.flush())
 
         thread::sleep(ten_millis)

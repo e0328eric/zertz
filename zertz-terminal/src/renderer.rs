@@ -1,3 +1,5 @@
+pub mod rect;
+
 use std::ops::{Deref, DerefMut};
 
 use crossterm::style::Stylize;
@@ -34,7 +36,7 @@ impl Renderer {
         for x in 0..9 {
             for y in 0..9 {
                 let drawing = match board[Coordinate::new(x as usize, y as usize)] {
-                    Ring::Empty => " ".reset(),
+                    Ring::Empty => ".".reset(),
                     Ring::Vacant => "O".bold(),
                     Ring::Occupied(Marble::White) => "@".bold().white(),
                     Ring::Occupied(Marble::Gray) => "@".bold().grey(),
