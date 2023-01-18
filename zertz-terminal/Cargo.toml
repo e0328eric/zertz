@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 crossterm = "0.25.0"
+thiserror = "1.0.38"
+zertz-core = { path = "../zertz-core" }

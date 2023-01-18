@@ -4,10 +4,13 @@ pub type BoardKind = kind::BoardKind;
 use std::fmt::{self, Debug};
 use std::ops::{Index, IndexMut};
 
+use serde::{Deserialize, Serialize};
+use serde_big_array::BigArray;
+
 use crate::coordinate::Coordinate;
 
-#[derive(Clone, Copy, Default)]
-pub(crate) enum Ring {
+#[derive(Clone, Copy, Default, Serialize, Deserialize)]
+pub enum Ring {
     Empty,
     #[default]
     Vacant,
@@ -37,16 +40,17 @@ impl Debug for Ring {
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Marble {
     White,
     Gray,
     Black,
 }
 
-#[derive(Clone, Copy, PartialEq)]
-pub(crate) struct Board {
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Board {
     pub kind: BoardKind,
+    #[serde(with = "BigArray")]
     pub data: [Ring; 81],
 }
 

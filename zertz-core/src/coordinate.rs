@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::fmt::{self, Display};
 
 use bitflags::bitflags;
+use serde::{Deserialize, Serialize};
 
 bitflags! {
     pub struct Direction: u8 {
@@ -12,7 +13,7 @@ bitflags! {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Coordinate {
     pub x: usize,
     pub y: usize,

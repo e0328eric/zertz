@@ -1,7 +1,9 @@
+use serde::{Deserialize, Serialize};
+
 use crate::error::ZertzCoreError;
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub enum BoardKind {
     #[default]
     Rings37 = 37,

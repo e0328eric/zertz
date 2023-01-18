@@ -14,6 +14,10 @@ pub enum ZertzCoreError {
     FailedToCatchMarble,
     #[error("invalid input data was given")]
     InvalidInputData,
+    #[error("cannot load the game data from a json file. Detail: {0}")]
+    LoadFailed(serde_json::error::Error),
+    #[error("cannot save the game data into a json file. Detail: {0}")]
+    SaveFailed(serde_json::error::Error),
 }
 
 pub type Result<T> = std::result::Result<T, ZertzCoreError>;

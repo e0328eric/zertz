@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct UnionFind<T> {
     inner: HashMap<T, usize>,
     reverse: HashMap<usize, T>,

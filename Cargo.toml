@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "zertz-core",
-    "zertz-rustyline",
     "zertz-terminal",
 ]
 

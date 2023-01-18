@@ -1,18 +1,22 @@
 use std::cell::Cell;
 use std::fmt::{self, Debug, Display};
 
+use serde::{Deserialize, Serialize};
+
 // macro include
 use crate::append_occupied_coordinate;
 
-use crate::board::*;
-use crate::coordinate::{Coordinate, CoordinateIter, Direction};
-use crate::error::{self, ZertzCoreError};
-use crate::union_find::UnionFind;
+use crate::{
+    board::*,
+    coordinate::{Coordinate, CoordinateIter, Direction},
+    error::{self, ZertzCoreError},
+    union_find::UnionFind,
+};
 
 const MAIN_EMPTY_COORD: Coordinate = Coordinate::new(8, 0);
 
-#[derive(Debug, Clone, Copy, Default)]
-struct MarbleCount {
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub(crate) struct MarbleCount {
     white_count: usize,
     gray_count: usize,
     black_count: usize,
@@ -62,7 +66,7 @@ impl MarbleCount {
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Player {
     Alice,
     Bob,
@@ -89,7 +93,7 @@ impl From<Player> for usize {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct CatchableMove {
     start_coord: Coordinate,
     catched_coord: Coordinate,
@@ -102,7 +106,7 @@ impl Display for CatchableMove {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum GameState {
     CheckIsCatchable,
     PutMarble,
@@ -110,63 +114,17 @@ pub enum GameState {
     GameEnd(Player),
 }
 
-#[derive(Clone, Copy)]
-pub struct GameHistory {
-    board: Board,
-    current_player: Player,
-    players_score: [MarbleCount; 2],
-    total_marble: MarbleCount,
-}
-
+#[derive(Serialize, Deserialize)]
 pub struct Game {
-    board: Board,
-    board_replace_history: Vec<Board>,
-    components: UnionFind<Coordinate>,
-    current_player: Player,
-    game_history: Vec<GameHistory>,
-    game_state: GameState,
-    players_score: [MarbleCount; 2],
-    prev_game_history: Option<GameHistory>,
-    output_data: GameOutputData,
-    repeat_count: Cell<usize>,
-    total_marble: MarbleCount,
-}
-
-#[derive(Default)]
-pub struct GameInputData {
-    put_coord: Option<Coordinate>,
-    remove_coord: Option<Coordinate>,
-    marble: Option<Marble>,
-    catch_data: Option<CatchableMove>,
-}
-
-impl GameInputData {
-    pub fn put_marble_data(
-        put_coord: Coordinate,
-        remove_coord: Coordinate,
-        marble: Marble,
-    ) -> Self {
-        Self {
-            put_coord: Some(put_coord),
-            remove_coord: Some(remove_coord),
-            marble: Some(marble),
-            catch_data: None,
-        }
-    }
-
-    pub fn catch_marble_data(catch_data: CatchableMove) -> Self {
-        Self {
-            put_coord: None,
-            remove_coord: None,
-            marble: None,
-            catch_data: Some(catch_data),
-        }
-    }
-}
-
-#[derive(Default, Clone)]
-pub struct GameOutputData {
-    pub movable_list: Option<Vec<CatchableMove>>,
+    pub(crate) board: Board,
+    pub(crate) board_replace_history: Vec<Board>,
+    #[serde(skip)]
+    pub(crate) components: UnionFind<Coordinate>,
+    pub(crate) current_player: Player,
+    pub(crate) game_state: GameState,
+    pub(crate) players_score: [MarbleCount; 2],
+    pub(crate) repeat_count: Cell<usize>,
+    pub(crate) total_marble: MarbleCount,
 }
 
 // ╭──────────────────────────────────────────────────────────╮
@@ -174,17 +132,14 @@ pub struct GameOutputData {
 // ╰──────────────────────────────────────────────────────────╯
 
 impl Game {
-    pub fn new(kind: BoardKind) -> Self {
+    pub(crate) fn new(kind: BoardKind) -> Self {
         let mut output = Self {
             board: Board::new(kind),
-            game_history: Vec::with_capacity(100),
             board_replace_history: Vec::with_capacity(20),
             components: UnionFind::from(CoordinateIter::new().collect::<Vec<_>>()),
             current_player: Player::Alice,
             game_state: GameState::PutMarble,
             players_score: [MarbleCount::default(); 2],
-            prev_game_history: None,
-            output_data: GameOutputData::default(),
             repeat_count: Cell::new(0),
             total_marble: MarbleCount {
                 white_count: 6,
@@ -196,125 +151,6 @@ impl Game {
 
         output
     }
-
-    pub fn play(&mut self, data: GameInputData) -> error::Result<()> {
-        let list_all_catchable = self.list_all_catchable();
-
-        match self.game_state {
-            GameState::CheckIsCatchable => {
-                if list_all_catchable.is_empty() {
-                    self.game_state = GameState::PutMarble;
-                } else {
-                    self.game_state = GameState::CatchMarble;
-                }
-
-                self.output_data = GameOutputData {
-                    movable_list: Some(list_all_catchable),
-                };
-            }
-            GameState::PutMarble => {
-                if let GameInputData {
-                    put_coord: Some(put_coord),
-                    remove_coord: Some(remove_coord),
-                    marble: Some(marble),
-                    ..
-                } = data
-                {
-                    self.put_marble(put_coord, remove_coord, marble)?;
-                    self.output_data = GameOutputData::default();
-                } else {
-                    return Err(ZertzCoreError::InvalidInputData);
-                }
-            }
-            GameState::CatchMarble => {
-                if let GameInputData {
-                    catch_data: Some(catch_data),
-                    ..
-                } = data
-                {
-                    let movable_list = self.catch_marble(catch_data)?;
-                    self.output_data = GameOutputData { movable_list };
-                } else {
-                    return Err(ZertzCoreError::InvalidInputData);
-                }
-            }
-            GameState::GameEnd(_) => {}
-        }
-
-        Ok(())
-    }
-
-    #[inline]
-    pub fn get_game_state(&self) -> GameState {
-        self.game_state
-    }
-
-    #[inline]
-    pub fn get_output(&self) -> GameOutputData {
-        self.output_data.clone()
-    }
-
-    pub fn rewind(&mut self) {
-        if let Some(GameHistory {
-            board,
-            current_player,
-            players_score,
-            total_marble,
-        }) = self.prev_game_history
-        {
-            self.board = board;
-            self.current_player = current_player;
-            self.players_score = players_score;
-            self.total_marble = total_marble;
-        } else if let Some(
-            game_history @ GameHistory {
-                board,
-                current_player,
-                players_score,
-                total_marble,
-            },
-        ) = self.game_history.pop()
-        {
-            self.board = board;
-            self.current_player = current_player;
-            self.players_score = players_score;
-            self.total_marble = total_marble;
-            self.prev_game_history = Some(game_history);
-        }
-
-        self.calculate_components();
-        self.game_state = GameState::CheckIsCatchable;
-    }
-
-    pub fn force_rewind(&mut self) {
-        if let Some(
-            game_history @ GameHistory {
-                board,
-                current_player,
-                players_score,
-                total_marble,
-            },
-        ) = self.game_history.pop()
-        {
-            self.board = board;
-            self.current_player = current_player;
-            self.players_score = players_score;
-            self.total_marble = total_marble;
-            self.prev_game_history = Some(game_history);
-        }
-
-        self.calculate_components();
-        self.game_state = GameState::CheckIsCatchable;
-    }
-
-    fn get_game_history(&self) -> GameHistory {
-        GameHistory {
-            board: self.board,
-            current_player: self.current_player,
-            players_score: self.players_score,
-            total_marble: self.total_marble,
-        }
-    }
 }
 
 // ╭──────────────────────────────────────────────────────────╮
@@ -322,7 +158,7 @@ impl Game {
 // ╰──────────────────────────────────────────────────────────╯
 
 impl Game {
-    fn catch_marble(
+    pub(crate) fn catch_marble(
         &mut self,
         catch_data: CatchableMove,
     ) -> error::Result<Option<Vec<CatchableMove>>> {
@@ -350,8 +186,6 @@ impl Game {
         self.board[catched_coord] = Ring::Vacant;
 
         self.board_replace_history.push(self.board.clone());
-        self.game_history.push(self.get_game_history());
-        self.prev_game_history = None;
 
         let list_catchable = self.list_catchable_once(marble_land_coord);
         Ok(if list_catchable.is_empty() {
@@ -373,7 +207,7 @@ impl Game {
         })
     }
 
-    fn list_all_catchable(&self) -> Vec<CatchableMove> {
+    pub(crate) fn list_all_catchable(&self) -> Vec<CatchableMove> {
         let mut output = Vec::with_capacity(81);
 
         for coord in CoordinateIter::new() {
@@ -404,7 +238,7 @@ impl Game {
 // ╰──────────────────────────────────────────────────────────╯
 
 impl Game {
-    fn put_marble(
+    pub(crate) fn put_marble(
         &mut self,
         put_coord: Coordinate,
         remove_coord: Coordinate,
@@ -423,8 +257,6 @@ impl Game {
 
         self.remove_ring(remove_coord)?;
         self.remove_isolated_island();
-        self.game_history.push(self.get_game_history());
-        self.prev_game_history = None;
         self.current_player.change_player();
         self.game_state = GameState::CheckIsCatchable;
 
@@ -487,7 +319,7 @@ impl Game {
                 && matches!(self.board.get_option(right), None | Some(Ring::Empty)))
     }
 
-    fn calculate_components(&mut self) {
+    pub(crate) fn calculate_components(&mut self) {
         self.components.clear();
 
         let mut right_coord;
