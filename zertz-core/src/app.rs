@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    board::{Board, BoardKind, Marble, Ring},
+    board::{Board, BoardKind, Marble},
     coordinate::Coordinate,
     error::{self, ZertzCoreError},
     game::{CatchableMove, Game, GameState, MarbleCount, Player},
@@ -53,7 +53,7 @@ struct History {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Server {
+pub struct App {
     game: Game,
     game_history: Vec<History>,
     prev_game_history: Option<History>,
@@ -61,7 +61,7 @@ pub struct Server {
     output_data: GameOutputData,
 }
 
-impl Server {
+impl App {
     pub fn new(kind: BoardKind) -> Self {
         Self {
             game: Game::new(kind),
@@ -185,25 +185,30 @@ impl Server {
     }
 
     pub fn load(json_str: impl AsRef<str>) -> error::Result<Self> {
-        let mut server = serde_json::from_str::<Self>(json_str.as_ref())
-            .map_err(|err| ZertzCoreError::LoadFailed(err))?;
+        let mut server =
+            serde_json::from_str::<Self>(json_str.as_ref()).map_err(ZertzCoreError::LoadFailed)?;
         server.game.calculate_components();
         Ok(server)
     }
 
     pub fn save(&self) -> error::Result<String> {
-        serde_json::to_string(self).map_err(|err| ZertzCoreError::SaveFailed(err))
+        serde_json::to_string(self).map_err(ZertzCoreError::SaveFailed)
     }
 
     pub fn load_without_history(json_str: impl AsRef<str>) -> error::Result<Self> {
-        let mut server = serde_json::from_str::<Self>(json_str.as_ref())
-            .map_err(|err| ZertzCoreError::LoadFailed(err))?;
-        server.game.calculate_components();
-        Ok(server)
+        let mut game =
+            serde_json::from_str::<Game>(json_str.as_ref()).map_err(ZertzCoreError::LoadFailed)?;
+        let board_kind = game.board.kind;
+        game.calculate_components();
+
+        Ok(Self {
+            game,
+            ..Self::new(board_kind)
+        })
     }
 
     pub fn save_without_history(&self) -> error::Result<String> {
-        serde_json::to_string(self).map_err(|err| ZertzCoreError::SaveFailed(err))
+        serde_json::to_string(&self.game).map_err(ZertzCoreError::SaveFailed)
     }
 
     fn get_game_history(&self) -> History {

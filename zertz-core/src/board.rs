@@ -161,14 +161,14 @@ impl Debug for Board {
             write!(f, "{:?} ", &self.data[i])?;
         }
         write!(f, "\n  1        ")?;
-        for i in (9 * 1)..(9 * 1 + last_draw_num) {
+        for i in 9..(9 + last_draw_num) {
             write!(f, "{:?} ", &self.data[i])?;
         }
         write!(f, "\n  0         ")?;
-        for i in (9 * 0)..(9 * 0 + last_draw_num) {
+        for i in 0..last_draw_num {
             write!(f, "{:?} ", &self.data[i])?;
         }
-        write!(f, "\n")?;
+        writeln!(f)?;
 
         Ok(())
     }

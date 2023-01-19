@@ -18,14 +18,15 @@ use crossterm::{
 use crate::error::{self, ZertzTerminalError};
 
 pub struct Terminal {
-    stdout: Stdout,
-    pub width: u16,
-    pub height: u16,
+    pub(super) stdout: Stdout,
+    pub(super) width: u16,
+    pub(super) height: u16,
 }
 
 impl Terminal {
-    pub fn new() -> error::Result<Self> {
+    pub(super) fn new() -> error::Result<Self> {
         let (width, height) = size()?;
+
         Ok(Self {
             stdout: io::stdout(),
             width: width - 1,
@@ -33,13 +34,13 @@ impl Terminal {
         })
     }
 
-    pub fn enable_raw_mode(&mut self) -> error::Result<()> {
+    pub(super) fn enable_raw_mode(&mut self) -> error::Result<()> {
         enable_raw_mode()?;
         execute!(self.stdout, EnterAlternateScreen, EnableMouseCapture, Hide)?;
         Ok(())
     }
 
-    pub fn disable_raw_mode(&mut self) -> error::Result<()> {
+    pub(super) fn disable_raw_mode(&mut self) -> error::Result<()> {
         execute!(self.stdout, LeaveAlternateScreen, DisableMouseCapture, Show)?;
         disable_raw_mode()?;
         Ok(())
@@ -53,7 +54,7 @@ impl Terminal {
         Ok(poll(timeout)?)
     }
 
-    pub fn draw<D>(&mut self, drawee: D, row: u16, col: u16) -> error::Result<()>
+    pub fn draw_object<D>(&mut self, drawee: D, row: u16, col: u16) -> error::Result<()>
     where
         D: Display + Stylize,
     {

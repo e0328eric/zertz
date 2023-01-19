@@ -102,6 +102,12 @@ impl CoordinateIter {
     }
 }
 
+impl Default for CoordinateIter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Iterator for CoordinateIter {
     type Item = Coordinate;
     fn next(&mut self) -> Option<Self::Item> {

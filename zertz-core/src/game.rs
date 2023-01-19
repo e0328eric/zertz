@@ -185,7 +185,7 @@ impl Game {
         self.board[start_coord] = Ring::Vacant;
         self.board[catched_coord] = Ring::Vacant;
 
-        self.board_replace_history.push(self.board.clone());
+        self.board_replace_history.push(self.board);
 
         let list_catchable = self.list_catchable_once(marble_land_coord);
         Ok(if list_catchable.is_empty() {
