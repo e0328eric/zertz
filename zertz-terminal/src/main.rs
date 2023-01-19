@@ -67,16 +67,16 @@ fn main_loop(renderer: &mut Renderer, zertz: &mut App) -> error::Result<bool> {
     }
 
     renderer.clear()?;
-    renderer.draw_shape(TitleBox::new(0, 0, 93, 8, "[ Debug Block ]").bold().blue())?;
-    renderer.draw_shape(TitleBox::new(1, 1, 91, 3, "[ Keyboard ]").bold().red())?;
-    renderer.draw_shape(TitleBox::new(1, 4, 91, 3, "[ Mouse ]").bold().green())?;
+    renderer.draw_shape(TitleBox::new(0, 0, 98, 8, "[ Debug Block ]").bold().blue())?;
+    renderer.draw_shape(TitleBox::new(1, 1, 96, 3, "[ Keyboard ]").bold().red())?;
+    renderer.draw_shape(TitleBox::new(1, 4, 96, 3, "[ Mouse ]").bold().green())?;
     renderer.draw_object(
-        format!("{:<89}", format!("{:?}", unsafe { GET_KEY_EVENT })).reset(),
+        format!("{:<94}", format!("{:?}", unsafe { GET_KEY_EVENT })).reset(),
         2,
         2,
     )?;
     renderer.draw_object(
-        format!("{:<89}", format!("{:?}", unsafe { GET_MOUSE_EVENT })).reset(),
+        format!("{:<94}", format!("{:?}", unsafe { GET_MOUSE_EVENT })).reset(),
         2,
         5,
     )?;
