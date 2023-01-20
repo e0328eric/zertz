@@ -1,18 +1,18 @@
 use crossterm::{
     cursor::MoveTo,
     queue,
-    style::{ContentStyle, Print, SetStyle, Stylize},
+    style::{ContentStyle, Print, ResetColor, SetStyle, Stylize},
 };
 
 use super::{shape::Shape, terminal::Terminal};
 use crate::error;
 
-const HORIZONTAL_LINE: char = '\u{2501}';
-const VERTICAL_LINE: char = '\u{2503}';
-const TOP_LEFT_CORNER: char = '\u{250F}';
-const BOTTOM_LEFT_CORNER: char = '\u{2517}';
-const TOP_RIGHT_CORNER: char = '\u{2513}';
-const BOTTOM_RIGHT_CORNER: char = '\u{251B}';
+pub(super) const HORIZONTAL_LINE: char = '\u{2501}';
+pub(super) const VERTICAL_LINE: char = '\u{2503}';
+pub(super) const TOP_LEFT_CORNER: char = '\u{250F}';
+pub(super) const BOTTOM_LEFT_CORNER: char = '\u{2517}';
+pub(super) const TOP_RIGHT_CORNER: char = '\u{2513}';
+pub(super) const BOTTOM_RIGHT_CORNER: char = '\u{251B}';
 
 #[derive(Debug, Clone, Copy)]
 pub struct Rect {
@@ -78,6 +78,7 @@ impl Shape for Rect {
                 Print(VERTICAL_LINE),
             )?;
         }
+        queue!(terminal.stdout, ResetColor)?;
 
         Ok(())
     }

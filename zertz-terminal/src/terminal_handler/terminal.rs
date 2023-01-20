@@ -1,13 +1,10 @@
-use std::fmt::Display;
 use std::io::{self, Stdout, Write};
 use std::time::Duration;
 
-#[allow(unused_imports)]
 use crossterm::{
-    cursor::{Hide, MoveTo, Show},
-    event::{poll, read, DisableMouseCapture, EnableMouseCapture, Event, KeyEvent, MouseEvent},
-    execute, queue,
-    style::{Print, Stylize},
+    cursor::{Hide, Show},
+    event::{poll, read, DisableMouseCapture, EnableMouseCapture, Event},
+    execute,
     terminal::{
         disable_raw_mode, enable_raw_mode, size, Clear, ClearType, EnterAlternateScreen,
         LeaveAlternateScreen,
@@ -34,13 +31,13 @@ impl Terminal {
         })
     }
 
-    pub(super) fn enable_raw_mode(&mut self) -> error::Result<()> {
+    pub fn enable_raw_mode(&mut self) -> error::Result<()> {
         enable_raw_mode()?;
         execute!(self.stdout, EnterAlternateScreen, EnableMouseCapture, Hide)?;
         Ok(())
     }
 
-    pub(super) fn disable_raw_mode(&mut self) -> error::Result<()> {
+    pub fn disable_raw_mode(&mut self) -> error::Result<()> {
         execute!(self.stdout, LeaveAlternateScreen, DisableMouseCapture, Show)?;
         disable_raw_mode()?;
         Ok(())
@@ -52,13 +49,6 @@ impl Terminal {
 
     pub fn poll(&self, timeout: Duration) -> error::Result<bool> {
         Ok(poll(timeout)?)
-    }
-
-    pub fn draw_object<D>(&mut self, drawee: D, row: u16, col: u16) -> error::Result<()>
-    where
-        D: Display + Stylize,
-    {
-        Ok(queue!(self.stdout, MoveTo(row, col), Print(drawee),)?)
     }
 
     pub fn clear(&mut self) -> error::Result<()> {
