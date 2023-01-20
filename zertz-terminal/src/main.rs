@@ -1,3 +1,4 @@
+mod coordinate;
 mod error;
 mod play_handler;
 mod terminal_handler;

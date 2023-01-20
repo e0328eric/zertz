@@ -109,6 +109,7 @@ impl Display for CatchableMove {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum GameState {
     CheckIsCatchable,
+    FoundSequentialMove,
     PutMarble,
     CatchMarble,
     GameEnd(Player),
@@ -125,6 +126,7 @@ pub struct Game {
     pub(crate) players_score: [MarbleCount; 2],
     pub(crate) repeat_count: Cell<usize>,
     pub(crate) total_marble: MarbleCount,
+    pub(crate) sequential_move_list: Option<Vec<CatchableMove>>,
 }
 
 // ╭──────────────────────────────────────────────────────────╮
@@ -146,6 +148,7 @@ impl Game {
                 gray_count: 8,
                 black_count: 10,
             },
+            sequential_move_list: None,
         };
         output.calculate_components();
 
@@ -158,10 +161,7 @@ impl Game {
 // ╰──────────────────────────────────────────────────────────╯
 
 impl Game {
-    pub(crate) fn catch_marble(
-        &mut self,
-        catch_data: CatchableMove,
-    ) -> error::Result<Option<Vec<CatchableMove>>> {
+    pub(crate) fn catch_marble(&mut self, catch_data: CatchableMove) -> error::Result<()> {
         let CatchableMove {
             start_coord,
             catched_coord,
@@ -188,23 +188,24 @@ impl Game {
         self.board_replace_history.push(self.board);
 
         let list_catchable = self.list_catchable_once(marble_land_coord);
-        Ok(if list_catchable.is_empty() {
+        if list_catchable.is_empty() {
             self.current_player.change_player();
             self.game_state = if let Some(winner) = self.who_is_win(&self.board) {
                 GameState::GameEnd(winner)
             } else {
-                GameState::PutMarble
+                GameState::FoundSequentialMove
             };
-
-            None
+            self.sequential_move_list = None;
         } else {
             self.game_state = if let Some(winner) = self.who_is_win(&self.board) {
                 GameState::GameEnd(winner)
             } else {
-                GameState::CatchMarble
+                GameState::FoundSequentialMove
             };
-            Some(list_catchable)
-        })
+            self.sequential_move_list = Some(list_catchable);
+        }
+
+        Ok(())
     }
 
     pub(crate) fn list_all_catchable(&self) -> Vec<CatchableMove> {

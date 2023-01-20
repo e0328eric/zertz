@@ -14,6 +14,7 @@ use crossterm::{
 };
 use zertz_core::app::App;
 
+use crate::coordinate::Coordinate;
 use crate::error;
 use crate::terminal_handler::{game_board::GameBoard, shape::Shape};
 
@@ -21,14 +22,14 @@ use self::titlebox::TitleBox;
 
 const BOX_WIDTH: u16 = 55;
 const BOX_HEIGHT: u16 = 21;
-const X_OFFSET: u16 = 19;
-const Y_OFFSET: u16 = 18;
+pub const X_OFFSET: u16 = 19;
+pub const Y_OFFSET: u16 = 18;
 
 #[allow(unused)]
 pub struct TerminalHandler {
     terminal: terminal::Terminal,
-    pub center: (u16, u16),
-    origin: (u16, u16),
+    pub center: Coordinate,
+    origin: Coordinate,
 }
 
 impl TerminalHandler {
@@ -40,8 +41,8 @@ impl TerminalHandler {
 
         Ok(Self {
             terminal,
-            center: (width / 2, height / 2),
-            origin: (standard_x, standard_y),
+            center: Coordinate::new(width / 2, height / 2),
+            origin: Coordinate::new(standard_x, standard_y),
         })
     }
 
@@ -63,11 +64,11 @@ impl TerminalHandler {
 
     pub fn draw_board(&mut self, server: &App) -> error::Result<()> {
         let board = server.get_current_board();
-        let game_board = GameBoard::new(board, self.origin.0 + X_OFFSET, self.origin.1 + Y_OFFSET);
+        let game_board = GameBoard::new(board, self.origin.x + X_OFFSET, self.origin.y + Y_OFFSET);
 
         self.draw_shape(TitleBox::new(
-            self.origin.0,
-            self.origin.1,
+            self.origin.x,
+            self.origin.y,
             BOX_WIDTH,
             BOX_HEIGHT,
             "[ Board ]",
@@ -77,13 +78,13 @@ impl TerminalHandler {
         Ok(())
     }
 
-    pub fn get_board_origin(&self) -> (u16, u16) {
-        (self.origin.0 + X_OFFSET, self.origin.1 + Y_OFFSET)
+    pub fn get_board_origin(&self) -> Coordinate {
+        Coordinate::new(self.origin.x + X_OFFSET, self.origin.y + Y_OFFSET)
     }
 
     #[allow(dead_code)]
     pub fn draw_axis(&mut self) -> error::Result<()> {
-        let (x, y) = self.center;
+        let Coordinate { x, y } = self.center;
 
         self.draw_object("0", x, y)?;
         for i in (1..).take_while(|n| n * 5 < x) {

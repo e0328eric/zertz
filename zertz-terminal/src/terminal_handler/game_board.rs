@@ -3,17 +3,14 @@ use crossterm::{
     queue,
     style::{ContentStyle, Print, SetStyle, Stylize},
 };
-use zertz_core::{board::*, coordinate::Coordinate};
+use zertz_core::{board::*, coordinate::CoordinateIter};
 
 use super::{shape::Shape, terminal::Terminal};
-use crate::error;
-
-const X_PADDING: u16 = 4;
-const Y_PADDING: u16 = 2;
+use crate::{coordinate::Coordinate, error};
 
 pub struct GameBoard {
     board: Board,
-    origin: (u16, u16),
+    origin: Coordinate,
     style: ContentStyle,
 }
 
@@ -21,7 +18,7 @@ impl GameBoard {
     pub fn new(board: Board, x: u16, y: u16) -> Self {
         Self {
             board,
-            origin: (x, y),
+            origin: Coordinate::new(x, y),
             style: ContentStyle::new(),
         }
     }
@@ -37,26 +34,22 @@ impl Stylize for GameBoard {
 
 impl Shape for GameBoard {
     fn draw(&self, terminal: &mut Terminal) -> error::Result<()> {
-        for x in 0..9 {
-            for y in 0..9 {
-                let drawing = match self.board[Coordinate::new(x as usize, y as usize)] {
-                    Ring::Empty => ".".reset(),
-                    Ring::Vacant => "O".bold(),
-                    Ring::Occupied(Marble::White) => "@".bold().white(),
-                    Ring::Occupied(Marble::Gray) => "@".bold().grey(),
-                    Ring::Occupied(Marble::Black) => "@".bold().black(),
-                };
+        for coord in CoordinateIter::new() {
+            let drawing = match self.board[coord] {
+                Ring::Empty => ".".reset(),
+                Ring::Vacant => "O".bold(),
+                Ring::Occupied(Marble::White) => "@".bold().white(),
+                Ring::Occupied(Marble::Gray) => "@".bold().grey(),
+                Ring::Occupied(Marble::Black) => "@".bold().black(),
+            };
 
-                queue!(
-                    terminal.stdout,
-                    SetStyle(self.style),
-                    MoveTo(
-                        self.origin.0 + X_PADDING * x - X_PADDING / 2 * y,
-                        self.origin.1 - Y_PADDING * y
-                    ),
-                    Print(drawing),
-                )?;
-            }
+            let render_coord = Coordinate::from_core_coord(coord, self.origin);
+            queue!(
+                terminal.stdout,
+                SetStyle(self.style),
+                MoveTo(render_coord.x, render_coord.y),
+                Print(drawing),
+            )?;
         }
 
         Ok(())

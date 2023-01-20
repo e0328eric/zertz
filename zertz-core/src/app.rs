@@ -39,9 +39,9 @@ impl GameInputData {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct GameOutputData {
-    pub movable_list: Option<Vec<CatchableMove>>,
+    pub movable_list: Vec<CatchableMove>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -58,7 +58,7 @@ pub struct App {
     game_history: Vec<History>,
     prev_game_history: Option<History>,
     #[serde(skip)]
-    output_data: GameOutputData,
+    output_data: Option<GameOutputData>,
 }
 
 impl App {
@@ -67,11 +67,11 @@ impl App {
             game: Game::new(kind),
             game_history: Vec::with_capacity(100),
             prev_game_history: None,
-            output_data: GameOutputData::default(),
+            output_data: None,
         }
     }
 
-    pub fn play(&mut self, data: GameInputData) -> error::Result<()> {
+    pub fn play(&mut self, data: Option<GameInputData>) -> error::Result<()> {
         let list_all_catchable = self.game.list_all_catchable();
 
         match self.game.game_state {
@@ -82,36 +82,47 @@ impl App {
                     self.game.game_state = GameState::CatchMarble;
                 }
 
-                self.output_data = GameOutputData {
-                    movable_list: Some(list_all_catchable),
-                };
+                self.output_data = Some(GameOutputData {
+                    movable_list: list_all_catchable,
+                });
+            }
+            GameState::FoundSequentialMove => {
+                if self.game.sequential_move_list.is_some() {
+                    self.game.game_state = GameState::CatchMarble;
+                } else {
+                    self.game.game_state = GameState::PutMarble;
+                }
             }
             GameState::PutMarble => {
-                if let GameInputData {
+                if let Some(GameInputData {
                     put_coord: Some(put_coord),
                     remove_coord: Some(remove_coord),
                     marble: Some(marble),
                     ..
-                } = data
+                }) = data
                 {
                     self.game.put_marble(put_coord, remove_coord, marble)?;
                     self.game_history.push(self.get_game_history());
                     self.prev_game_history = None;
-                    self.output_data = GameOutputData::default();
+                    self.output_data = None;
                 } else {
                     return Err(ZertzCoreError::InvalidInputData);
                 }
             }
             GameState::CatchMarble => {
-                if let GameInputData {
+                if let Some(GameInputData {
                     catch_data: Some(catch_data),
                     ..
-                } = data
+                }) = data
                 {
-                    let movable_list = self.game.catch_marble(catch_data)?;
+                    self.game.catch_marble(catch_data)?;
                     self.game_history.push(self.get_game_history());
                     self.prev_game_history = None;
-                    self.output_data = GameOutputData { movable_list };
+                    self.output_data = self
+                        .game
+                        .sequential_move_list
+                        .clone()
+                        .map(|movable_list| GameOutputData { movable_list });
                 } else {
                     return Err(ZertzCoreError::InvalidInputData);
                 }
@@ -173,6 +184,10 @@ impl App {
 
         self.game.calculate_components();
         self.game.game_state = GameState::CheckIsCatchable;
+    }
+
+    pub fn get_output(&self) -> Option<GameOutputData> {
+        self.output_data.clone()
     }
 
     #[inline]
