@@ -7,36 +7,12 @@ use crate::{
     game::{CatchableMove, Game, GameState, MarbleCount, Player},
 };
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct GameInputData {
-    put_coord: Option<Coordinate>,
-    remove_coord: Option<Coordinate>,
-    marble: Option<Marble>,
-    catch_data: Option<CatchableMove>,
-}
-
-impl GameInputData {
-    pub fn put_marble_data(
-        put_coord: Coordinate,
-        remove_coord: Coordinate,
-        marble: Marble,
-    ) -> Self {
-        Self {
-            put_coord: Some(put_coord),
-            remove_coord: Some(remove_coord),
-            marble: Some(marble),
-            catch_data: None,
-        }
-    }
-
-    pub fn catch_marble_data(catch_data: CatchableMove) -> Self {
-        Self {
-            put_coord: None,
-            remove_coord: None,
-            marble: None,
-            catch_data: Some(catch_data),
-        }
-    }
+    pub put_coord: Option<Coordinate>,
+    pub remove_coord: Option<Coordinate>,
+    pub marble: Option<Marble>,
+    pub catch_data: Option<CatchableMove>,
 }
 
 #[derive(Debug, Clone)]
@@ -71,7 +47,7 @@ impl App {
         }
     }
 
-    pub fn play(&mut self, data: Option<GameInputData>) -> error::Result<()> {
+    pub fn play(&mut self, data: &Option<GameInputData>) -> error::Result<()> {
         let list_all_catchable = self.game.list_all_catchable();
 
         match self.game.game_state {
@@ -101,7 +77,7 @@ impl App {
                     ..
                 }) = data
                 {
-                    self.game.put_marble(put_coord, remove_coord, marble)?;
+                    self.game.put_marble(*put_coord, *remove_coord, *marble)?;
                     self.game_history.push(self.get_game_history());
                     self.prev_game_history = None;
                     self.output_data = None;
@@ -115,7 +91,7 @@ impl App {
                     ..
                 }) = data
                 {
-                    self.game.catch_marble(catch_data)?;
+                    self.game.catch_marble(*catch_data)?;
                     self.game_history.push(self.get_game_history());
                     self.prev_game_history = None;
                     self.output_data = self
@@ -133,6 +109,7 @@ impl App {
         Ok(())
     }
 
+    // FIXME: This has a bug!
     pub fn rewind(&mut self) {
         if let Some(History {
             board,
@@ -197,6 +174,10 @@ impl App {
 
     pub fn get_current_board(&self) -> Board {
         self.game.board
+    }
+
+    pub fn get_removable_rings(&self) -> Vec<Coordinate> {
+        self.game.collect_removable_rings()
     }
 
     pub fn load(json_str: impl AsRef<str>) -> error::Result<Self> {

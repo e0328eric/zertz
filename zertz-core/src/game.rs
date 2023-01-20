@@ -286,7 +286,7 @@ impl Game {
         Ok(())
     }
 
-    fn collect_removable_rings(&self) -> Vec<Coordinate> {
+    pub(crate) fn collect_removable_rings(&self) -> Vec<Coordinate> {
         let mut output = Vec::with_capacity(81);
 
         for coord in CoordinateIter::new() {

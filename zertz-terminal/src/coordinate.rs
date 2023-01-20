@@ -15,14 +15,22 @@ impl Coordinate {
         Self { x, y }
     }
 
-    pub fn into_core_coord(self, origin: Self) -> CoreCoordinate {
-        let x = (origin.y * X_PADDING + 2 * self.x * Y_PADDING
-            - 2 * origin.x * Y_PADDING
-            - X_PADDING * self.y)
-            / (2 * X_PADDING * Y_PADDING);
+    pub fn into_core_coord(self, origin: Self) -> Option<CoreCoordinate> {
+        let x_add = origin.y * X_PADDING + 2 * self.x * Y_PADDING;
+        let x_sub = 2 * origin.x * Y_PADDING + X_PADDING * self.y;
+
+        if x_add < x_sub || origin.y < self.y {
+            return None;
+        }
+
+        let x = (x_add - x_sub) / (2 * X_PADDING * Y_PADDING);
         let y = (origin.y - self.y) / Y_PADDING;
 
-        CoreCoordinate::new(x as usize, y as usize)
+        if x >= 9 || y >= 9 {
+            return None;
+        }
+
+        Some(CoreCoordinate::new(x as usize, y as usize))
     }
 
     pub fn from_core_coord(coord: CoreCoordinate, origin: Self) -> Self {

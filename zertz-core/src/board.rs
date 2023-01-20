@@ -89,7 +89,7 @@ impl Board {
         if coord.x >= 9 || coord.y >= 9 {
             return None;
         }
-        self.data.get(coord.x + 9 * coord.y)
+        self.data.get(usize::from(coord))
     }
 
     pub(crate) fn get_option(&self, coord: Option<Coordinate>) -> Option<&Ring> {
@@ -106,14 +106,14 @@ impl Index<Coordinate> for Board {
 
     fn index(&self, coord: Coordinate) -> &Self::Output {
         assert!(coord.x < 9 && coord.y < 9);
-        &self.data[coord.x + 9 * coord.y]
+        &self.data[usize::from(coord)]
     }
 }
 
 impl IndexMut<Coordinate> for Board {
     fn index_mut(&mut self, coord: Coordinate) -> &mut Self::Output {
         assert!(coord.x < 9 && coord.y < 9);
-        &mut self.data[coord.x + 9 * coord.y]
+        &mut self.data[usize::from(coord)]
     }
 }
 

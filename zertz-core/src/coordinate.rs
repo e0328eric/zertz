@@ -70,6 +70,12 @@ impl Coordinate {
     }
 }
 
+impl From<Coordinate> for usize {
+    fn from(coord: Coordinate) -> Self {
+        coord.x + 9 * coord.y
+    }
+}
+
 impl PartialOrd for Coordinate {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(if self.y == other.y {

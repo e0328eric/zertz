@@ -46,7 +46,7 @@ impl TerminalHandler {
         })
     }
 
-    pub fn draw_object<D>(&mut self, drawee: D, row: u16, col: u16) -> error::Result<()>
+    pub fn draw_object<D>(&mut self, drawee: &D, row: u16, col: u16) -> error::Result<()>
     where
         D: Display + Stylize,
     {
@@ -58,15 +58,12 @@ impl TerminalHandler {
         )?)
     }
 
-    pub fn draw_shape(&mut self, shape: impl Shape) -> error::Result<()> {
+    pub fn draw_shape(&mut self, shape: &impl Shape) -> error::Result<()> {
         shape.draw(&mut self.terminal)
     }
 
-    pub fn draw_board(&mut self, server: &App) -> error::Result<()> {
-        let board = server.get_current_board();
-        let game_board = GameBoard::new(board, self.origin.x + X_OFFSET, self.origin.y + Y_OFFSET);
-
-        self.draw_shape(TitleBox::new(
+    pub fn draw_board(&mut self, game_board: &GameBoard) -> error::Result<()> {
+        self.draw_shape(&TitleBox::new(
             self.origin.x,
             self.origin.y,
             BOX_WIDTH,
@@ -86,14 +83,14 @@ impl TerminalHandler {
     pub fn draw_axis(&mut self) -> error::Result<()> {
         let Coordinate { x, y } = self.center;
 
-        self.draw_object("0", x, y)?;
+        self.draw_object(&"0", x, y)?;
         for i in (1..).take_while(|n| n * 5 < x) {
-            self.draw_object(format!("{}", i * 5), x + i * 5, y)?;
-            self.draw_object(format!("-{}", i * 5), x - i * 5, y)?;
+            self.draw_object(&format!("{}", i * 5), x + i * 5, y)?;
+            self.draw_object(&format!("-{}", i * 5), x - i * 5, y)?;
         }
         for i in (1..).take_while(|n| n * 2 < y) {
-            self.draw_object(format!("{}", i * 2), x, y + i * 2)?;
-            self.draw_object(format!("-{}", i * 2), x, y - i * 2)?;
+            self.draw_object(&format!("{}", i * 2), x, y + i * 2)?;
+            self.draw_object(&format!("-{}", i * 2), x, y - i * 2)?;
         }
 
         Ok(())

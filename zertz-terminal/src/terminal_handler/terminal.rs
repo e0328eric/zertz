@@ -2,7 +2,7 @@ use std::io::{self, Stdout, Write};
 use std::time::Duration;
 
 use crossterm::{
-    cursor::{Hide, Show},
+    cursor::{Hide, MoveTo, Show},
     event::{poll, read, DisableMouseCapture, EnableMouseCapture, Event},
     execute,
     terminal::{
@@ -11,8 +11,7 @@ use crossterm::{
     },
 };
 
-#[allow(unused_imports)]
-use crate::error::{self, ZertzTerminalError};
+use crate::error;
 
 pub struct Terminal {
     pub(super) stdout: Stdout,
@@ -53,6 +52,14 @@ impl Terminal {
 
     pub fn clear(&mut self) -> error::Result<()> {
         Ok(execute!(self.stdout, Clear(ClearType::Purge))?)
+    }
+
+    pub fn clear_line(&mut self, row: u16) -> error::Result<()> {
+        Ok(execute!(
+            self.stdout,
+            MoveTo(0, row),
+            Clear(ClearType::CurrentLine)
+        )?)
     }
 
     pub fn flush(&mut self) -> error::Result<()> {
