@@ -35,15 +35,23 @@ pub struct App {
     prev_game_history: Option<History>,
     #[serde(skip)]
     output_data: Option<GameOutputData>,
+    pub players_score: [MarbleCount; 2],
+    pub total_marble: MarbleCount,
 }
 
 impl App {
     pub fn new(kind: BoardKind) -> Self {
+        let game = Game::new(kind);
+        let players_score = game.players_score;
+        let total_marble = game.total_marble;
+
         Self {
-            game: Game::new(kind),
+            game,
             game_history: Vec::with_capacity(100),
             prev_game_history: None,
             output_data: None,
+            players_score,
+            total_marble,
         }
     }
 
@@ -105,6 +113,9 @@ impl App {
             }
             GameState::GameEnd(_) => {}
         }
+
+        self.players_score = self.game.players_score;
+        self.total_marble = self.game.total_marble;
 
         Ok(())
     }

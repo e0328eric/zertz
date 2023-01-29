@@ -20,6 +20,7 @@ pub struct VisualRing {
     pub selected: bool,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct GameBoard {
     board: [VisualRing; 81],
     origin: Coordinate,

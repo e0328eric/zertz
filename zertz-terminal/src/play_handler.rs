@@ -1,6 +1,3 @@
-mod rendering;
-
-use std::thread;
 use std::time;
 
 use crossterm::event::{
@@ -16,11 +13,11 @@ use zertz_core::{
 
 use crate::coordinate::Coordinate;
 use crate::error;
-use crate::terminal_handler::{game_board::GameBoard, TerminalHandler};
+use crate::error::ZertzTerminalError;
+use crate::renderer::{game_board::GameBoard, RenderData, RendererState};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PlayHandlerState {
-    StartGame,
     GetPutCoord,
     GetRemoveCoord,
     GetMarble,
@@ -32,59 +29,54 @@ pub enum PlayHandlerState {
 #[allow(dead_code)]
 pub struct PlayHandler {
     app: App,
-    terminal_handler: TerminalHandler,
     game_board: GameBoard,
-    center: Coordinate,
-    origin: Coordinate,
     state: PlayHandlerState,
+    renderer_state: RendererState,
     input_data: Option<GameInputData>,
     output_data: Option<GameOutputData>,
+    game_origin: Coordinate,
     explain_primary_text: String,
     explain_supplimentary_text: String,
 }
 
 impl PlayHandler {
-    pub fn new(app: App, terminal_handler: TerminalHandler) -> Self {
-        let center = terminal_handler.center;
-        let origin = terminal_handler.get_board_origin();
-
+    pub fn new(app: App, center: Coordinate, origin: Coordinate) -> (Self, RenderData) {
         let game_board = GameBoard::new(&app.get_current_board(), origin.x, origin.y);
 
-        Self {
+        let play_handler = Self {
             app,
-            terminal_handler,
             game_board,
-            center,
-            origin,
-            state: PlayHandlerState::StartGame,
+            state: PlayHandlerState::GetPutCoord,
+            renderer_state: RendererState::default(),
             input_data: None,
             output_data: None,
+            game_origin: origin,
             explain_primary_text: String::with_capacity(center.x as usize * 2),
             explain_supplimentary_text: String::with_capacity(center.x as usize * 2),
-        }
+        };
+        let init_render_data = RenderData {
+            state: RendererState::DrawIntro,
+            game_board: play_handler.game_board,
+            players_score: play_handler.app.players_score,
+            total_marble: play_handler.app.total_marble,
+            explain_primary_text: play_handler.explain_primary_text.clone(),
+            explain_supplimentary_text: play_handler.explain_supplimentary_text.clone(),
+        };
+
+        (play_handler, init_render_data)
     }
 
-    pub fn enable_raw_mode(&mut self) -> error::Result<()> {
-        self.terminal_handler.enable_raw_mode()
+    pub fn is_game_end(&self) -> bool {
+        self.state == PlayHandlerState::QuitGame
     }
 
-    pub fn disable_raw_mode(&mut self) -> error::Result<()> {
-        self.terminal_handler.disable_raw_mode()
-    }
-
-    pub fn run_game(&mut self) -> error::Result<bool> {
-        let ten_millis = time::Duration::from_millis(10);
-
-        let mut key_event = None;
-        let mut mouse_event = None;
-
+    pub fn run_game(&mut self, event: Event) -> error::Result<Option<RenderData>> {
         match self.state {
-            PlayHandlerState::QuitGame => return Ok(true),
-            PlayHandlerState::StartGame => self.state = PlayHandlerState::GetPutCoord,
+            PlayHandlerState::QuitGame => return Ok(None),
             PlayHandlerState::GetPutCoord
             | PlayHandlerState::GetRemoveCoord
             | PlayHandlerState::GetMarble
-            | PlayHandlerState::GetCatchData => self.io_action(&mut key_event, &mut mouse_event)?,
+            | PlayHandlerState::GetCatchData => self.main_game_event_handle(event)?,
             PlayHandlerState::RunGame => {
                 for coord in CoordinateIter::new() {
                     self.game_board[coord].focused = false;
@@ -103,7 +95,16 @@ impl PlayHandler {
                             ) => {
                                 self.app.rewind();
                                 self.state = PlayHandlerState::GetPutCoord;
-                                return Ok(false);
+                                return Ok(Some(RenderData {
+                                    state: RendererState::RedrawEntire,
+                                    game_board: self.game_board,
+                                    players_score: self.app.players_score,
+                                    total_marble: self.app.total_marble,
+                                    explain_primary_text: self.explain_primary_text.clone(),
+                                    explain_supplimentary_text: self
+                                        .explain_supplimentary_text
+                                        .clone(),
+                                }));
                             }
                             Err(err) => return Err(err.into()),
                         }
@@ -116,7 +117,16 @@ impl PlayHandler {
                             Err(ZertzCoreError::InvalidInputData) => {
                                 self.app.rewind();
                                 self.state = PlayHandlerState::GetCatchData;
-                                return Ok(false);
+                                return Ok(Some(RenderData {
+                                    state: RendererState::RedrawEntire,
+                                    game_board: self.game_board,
+                                    players_score: self.app.players_score,
+                                    total_marble: self.app.total_marble,
+                                    explain_primary_text: self.explain_primary_text.clone(),
+                                    explain_supplimentary_text: self
+                                        .explain_supplimentary_text
+                                        .clone(),
+                                }));
                             }
                             Err(err) => return Err(err.into()),
                         }
@@ -137,31 +147,23 @@ impl PlayHandler {
             }
         }
 
-        match self.render_game(key_event, mouse_event) {
-            Ok(()) => {}
-            Err(err) => {
-                println!("{:?}", err);
-                return Ok(true);
-            }
-        }
-
-        thread::sleep(ten_millis);
-
-        Ok(false)
+        return Ok(Some(RenderData {
+            state: self.renderer_state,
+            game_board: self.game_board,
+            players_score: self.app.players_score,
+            total_marble: self.app.total_marble,
+            explain_primary_text: self.explain_primary_text.clone(),
+            explain_supplimentary_text: self.explain_supplimentary_text.clone(),
+        }));
     }
 
-    fn io_action(
-        &mut self,
-        key_event_option: &mut Option<KeyEvent>,
-        mouse_event_option: &mut Option<MouseEvent>,
-    ) -> error::Result<()> {
-        let delta = time::Duration::from_millis(10);
-
+    fn main_game_event_handle(&mut self, event: Event) -> error::Result<()> {
         match self.state {
             PlayHandlerState::GetPutCoord => {
                 self.clear_explain_text();
                 self.explain_primary_text
                     .push_str("Select the ring (the 'O' characters) where the marble is put.");
+                self.renderer_state = RendererState::UpdateExplanation;
             }
             PlayHandlerState::GetRemoveCoord => {
                 self.clear_explain_text();
@@ -170,6 +172,7 @@ impl PlayHandler {
                 for coord in self.app.get_removable_rings().into_iter() {
                     self.game_board[coord].focused = true;
                 }
+                self.renderer_state = RendererState::UpdateExplanation;
             }
             PlayHandlerState::GetMarble => {
                 self.clear_explain_text();
@@ -177,25 +180,19 @@ impl PlayHandler {
                     .push_str("Select the color of the marble to put on:");
                 self.explain_supplimentary_text
                     .push_str("Input w/W for white, g/G for gray, and b/B for black.");
+                self.renderer_state = RendererState::UpdateExplanation;
             }
-            PlayHandlerState::GetCatchData => {}
+            PlayHandlerState::GetCatchData => {
+                todo!("play_handler::io_action");
+            }
             _ => unreachable!(),
         }
 
-        if self.terminal_handler.poll(delta)? {
-            let event = self.terminal_handler.read()?;
-            match event {
-                Event::Key(key_event) => {
-                    *key_event_option = Some(key_event);
-                    self.handle_key_event(key_event)?;
-                }
-                Event::Mouse(mouse_event) => {
-                    *mouse_event_option = Some(mouse_event);
-                    self.handle_mouse_event(mouse_event)?;
-                }
-                _ => {}
-            }
-        };
+        match event {
+            Event::Key(key_event) => self.handle_key_event(key_event)?,
+            Event::Mouse(mouse_event) => self.handle_mouse_event(mouse_event)?,
+            _ => {}
+        }
 
         Ok(())
     }
@@ -262,7 +259,7 @@ impl PlayHandler {
                     == (MouseEventKind::Down(MouseButton::Left), KeyModifiers::NONE)
                 {
                     let valid_coord = if let Some(coord) =
-                        Coordinate::new(column, row).into_core_coord(self.origin)
+                        Coordinate::new(column, row).into_core_coord(self.game_origin)
                     {
                         coord
                     } else {
@@ -285,7 +282,7 @@ impl PlayHandler {
                     == (MouseEventKind::Down(MouseButton::Left), KeyModifiers::NONE)
                 {
                     let valid_coord = if let Some(coord) =
-                        Coordinate::new(column, row).into_core_coord(self.origin)
+                        Coordinate::new(column, row).into_core_coord(self.game_origin)
                     {
                         coord
                     } else {

@@ -6,7 +6,7 @@ use crossterm::{
     style::{ContentStyle, Print, ResetColor, SetStyle, Stylize},
 };
 
-use crate::{error, terminal_handler::rect::Rect};
+use crate::error;
 
 use super::{rect::*, shape::Shape, terminal::Terminal};
 

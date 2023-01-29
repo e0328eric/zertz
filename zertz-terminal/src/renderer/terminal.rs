@@ -2,13 +2,10 @@ use std::io::{self, Stdout, Write};
 use std::time::Duration;
 
 use crossterm::{
-    cursor::{Hide, MoveTo, Show},
-    event::{poll, read, DisableMouseCapture, EnableMouseCapture, Event},
+    cursor::MoveTo,
+    event::{poll, read, Event},
     execute,
-    terminal::{
-        disable_raw_mode, enable_raw_mode, size, Clear, ClearType, EnterAlternateScreen,
-        LeaveAlternateScreen,
-    },
+    terminal::{size, Clear, ClearType},
 };
 
 use crate::error;
@@ -28,18 +25,6 @@ impl Terminal {
             width: width - 1,
             height: height - 1,
         })
-    }
-
-    pub fn enable_raw_mode(&mut self) -> error::Result<()> {
-        enable_raw_mode()?;
-        execute!(self.stdout, EnterAlternateScreen, EnableMouseCapture, Hide)?;
-        Ok(())
-    }
-
-    pub fn disable_raw_mode(&mut self) -> error::Result<()> {
-        execute!(self.stdout, LeaveAlternateScreen, DisableMouseCapture, Show)?;
-        disable_raw_mode()?;
-        Ok(())
     }
 
     pub fn read(&self) -> error::Result<Event> {

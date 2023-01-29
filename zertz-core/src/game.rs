@@ -16,7 +16,7 @@ use crate::{
 const MAIN_EMPTY_COORD: Coordinate = Coordinate::new(8, 0);
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
-pub(crate) struct MarbleCount {
+pub struct MarbleCount {
     white_count: usize,
     gray_count: usize,
     black_count: usize,
