@@ -5,7 +5,6 @@ mod terminal;
 pub mod titlebox;
 
 use std::fmt::Display;
-use std::mem::MaybeUninit;
 use std::time;
 
 use crossterm::{
@@ -60,10 +59,7 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new(
-        maybe_center: &mut MaybeUninit<Coordinate>,
-        maybe_origin: &mut MaybeUninit<Coordinate>,
-    ) -> error::Result<Self> {
+    pub fn new() -> error::Result<(Self, Coordinate, Coordinate)> {
         let terminal = terminal::Terminal::new()?;
         let (width, height) = (terminal.width, terminal.height);
 
@@ -73,16 +69,19 @@ impl Renderer {
         if x_overflow || y_overflow {
             Err(ZertzTerminalError::InappropriateTerminalSize)
         } else {
-            let center = *maybe_center.write(Coordinate::new(width >> 1, height >> 1));
-            let origin =
-                *maybe_origin.write(Coordinate::new(origin_x + X_OFFSET, origin_y + Y_OFFSET));
-            Ok(Self {
-                terminal,
-                state: RendererState::default(),
+            let center = Coordinate::new(width >> 1, height >> 1);
+            let origin = Coordinate::new(origin_x + X_OFFSET, origin_y + Y_OFFSET);
+            Ok((
+                Self {
+                    terminal,
+                    state: RendererState::default(),
+                    center,
+                    origin,
+                    prevent_update: false,
+                },
                 center,
                 origin,
-                prevent_update: false,
-            })
+            ))
         }
     }
 

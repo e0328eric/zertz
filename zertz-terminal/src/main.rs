@@ -3,7 +3,6 @@ mod error;
 mod play_handler;
 mod renderer;
 
-use std::mem::MaybeUninit;
 use std::sync::mpsc::{channel, RecvTimeoutError};
 use std::thread;
 use std::time;
@@ -16,20 +15,10 @@ use play_handler::PlayHandler;
 use renderer::{RenderData, Renderer};
 
 fn main() -> error::Result<()> {
-    // TODO: make an user input with changing the board.
-    let mut center = MaybeUninit::uninit();
-    let mut origin = MaybeUninit::uninit();
-    let mut renderer = Renderer::new(&mut center, &mut origin)?;
+    let (mut renderer, center, origin) = Renderer::new()?;
 
-    // SAFETY: While this code is executed, since Renderer::new is successfully runs,
-    // center and origin are safetly initialized. So we can unwrap MaybeUninits.
-    let (play_handler, init_render_data) = unsafe {
-        PlayHandler::new(
-            App::new(BoardKind::Rings61),
-            center.assume_init(),
-            origin.assume_init(),
-        )
-    };
+    let (play_handler, init_render_data) =
+        PlayHandler::new(App::new(BoardKind::Rings61), center, origin);
 
     let (render_data_sender, render_data_receiver) = channel::<Option<RenderData>>();
     let (event_sender, event_receiver) = channel::<Event>();
